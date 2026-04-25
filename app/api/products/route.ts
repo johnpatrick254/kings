@@ -9,9 +9,14 @@ import {
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
 
+  const rawFirst = searchParams.get('first')
+  const rawLast = searchParams.get('last')
+
   const variables: GetProductsVariables = {
-    first: Number(searchParams.get('first') ?? 12),
+    first: rawLast ? undefined : Number(rawFirst ?? 12),
     after: searchParams.get('after') ?? undefined,
+    last: rawLast ? Number(rawLast) : undefined,
+    before: searchParams.get('before') ?? undefined,
     country: searchParams.get('country') ?? undefined,
     language: searchParams.get('language') ?? undefined,
   }

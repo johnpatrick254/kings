@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useProducts } from '@/hooks/use-products'
 import { localeConfig, type Locale } from '@/lib/i18n'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,7 +29,28 @@ function ProductCardSkeleton() {
 
 export function ProductsGrid({ lang }: { lang: Locale }) {
   const { country, language } = localeConfig[lang]
-  const { data, isLoading, isError } = useProducts({ country, language })
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const after = searchParams.get('after') ?? undefined
+  const before = searchParams.get('before') ?? undefined
+
+  const queryParams = before
+    ? { last: 12, before, country, language }
+    : { first: 12, after, country, language }
+
+  const { data, isLoading, isError } = useProducts(queryParams)
+
+  function goToNext() {
+    if (!data?.pageInfo.endCursor) return
+    router.push(`${pathname}?after=${data.pageInfo.endCursor}`)
+  }
+
+  function goToPrev() {
+    if (!data?.pageInfo.startCursor) return
+    router.push(`${pathname}?before=${data.pageInfo.startCursor}`)
+  }
 
   if (isLoading) {
     return (
@@ -57,49 +79,74 @@ export function ProductsGrid({ lang }: { lang: Locale }) {
     )
   }
 
+  const { hasNextPage, hasPreviousPage } = data.pageInfo
+
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {data.products.map((product) => {
-        const image = product.images.edges[0]?.node
-        const { amount, currencyCode } = product.priceRange.minVariantPrice
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {data.products.map((product) => {
+          const image = product.images.edges[0]?.node
+          const { amount, currencyCode } = product.priceRange.minVariantPrice
 
-        return (
-          <Card key={product.id} className="overflow-hidden flex flex-col">
-            <div className="relative aspect-square bg-muted">
-              {image ? (
-                <Image
-                  src={image.url}
-                  alt={image.altText ?? product.title}
-                  fill
-                  loading="eager"
-                  className="object-cover"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-                  No image
-                </div>
-              )}
-            </div>
+          return (
+            <Card key={product.id} className="overflow-hidden flex flex-col">
+              <div className="relative aspect-square bg-muted">
+                {image ? (
+                  <Image
+                    src={image.url}
+                    alt={image.altText ?? product.title}
+                    fill
+                    loading="eager"
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                    No image
+                  </div>
+                )}
+              </div>
 
-            <CardHeader className="pb-2">
-              <CardTitle className="line-clamp-2 text-base">{product.title}</CardTitle>
-            </CardHeader>
+              <CardHeader className="pb-2">
+                <CardTitle className="line-clamp-2 text-base">{product.title}</CardTitle>
+              </CardHeader>
 
-            <CardContent className="pb-2 flex-1">
-              <Badge variant="secondary">
-                {parseFloat(amount).toFixed(2)} {currencyCode}
-              </Badge>
-            </CardContent>
+              <CardContent className="pb-2 flex-1">
+                <Badge variant="secondary">
+                  {parseFloat(amount).toFixed(2)} {currencyCode}
+                </Badge>
+              </CardContent>
 
-            <CardFooter>
-              <Button asChild className="w-full" size="sm">
-                <Link href={`/${lang}/products/${product.handle}`}>View Product</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        )
-      })}
+              <CardFooter>
+                <Button asChild className="w-full" size="sm">
+                  <Link href={`/${lang}/products/${product.handle}`}>View Product</Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          )
+        })}
+      </div>
+
+      {(hasPreviousPage || hasNextPage) && (
+        <div className="flex items-center justify-center gap-4">
+          <Button
+            variant="outline"
+            onClick={goToPrev}
+            disabled={!hasPreviousPage}
+            className={!hasPreviousPage ? 'invisible' : ''}
+          >
+            ← Previous
+          </Button>
+          <Button
+            variant="outline"
+            onClick={goToNext}
+            disabled={!hasNextPage}
+            className={!hasNextPage ? 'invisible' : ''}
+          >
+            Next →
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

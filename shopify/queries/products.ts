@@ -75,8 +75,10 @@ export type GetProductResponse = {
 // --- Variable types ---
 
 export type GetProductsVariables = {
-  first: number
+  first?: number
   after?: string
+  last?: number
+  before?: string
   country?: string
   language?: string
 }
@@ -91,12 +93,14 @@ export type GetProductVariables = {
 
 export const GET_PRODUCTS_QUERY = `
   query GetProducts(
-    $first: Int!
+    $first: Int
     $after: String
+    $last: Int
+    $before: String
     $country: CountryCode
     $language: LanguageCode
   ) @inContext(country: $country, language: $language) {
-    products(first: $first, after: $after) {
+    products(first: $first, after: $after, last: $last, before: $before) {
       pageInfo {
         hasNextPage
         hasPreviousPage

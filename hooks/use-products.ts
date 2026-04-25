@@ -11,19 +11,26 @@ type ProductsApiResponse = {
 type UseProductsParams = {
   first?: number
   after?: string
+  last?: number
+  before?: string
   country?: string
   language?: string
 }
 
 export function useProducts(params: UseProductsParams = {}) {
-  const { first = 12, after, country, language } = params
+  const { first, after, last, before, country, language } = params
 
   return useQuery<ProductsApiResponse>({
-    queryKey: ['products', { first, after, country, language }],
+    queryKey: ['products', { first, after, last, before, country, language }],
     queryFn: async () => {
       const searchParams = new URLSearchParams()
-      searchParams.set('first', String(first))
+      if (last) {
+        searchParams.set('last', String(last))
+      } else {
+        searchParams.set('first', String(first ?? 12))
+      }
       if (after) searchParams.set('after', after)
+      if (before) searchParams.set('before', before)
       if (country) searchParams.set('country', country)
       if (language) searchParams.set('language', language)
 
